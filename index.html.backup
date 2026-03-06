@@ -292,55 +292,34 @@
             </div>
         </section>
 
-        <!-- Proof of Expertise Section -->
-        <section class="proof">
+        <!-- Expertise Section -->
+        <section class="expertise">
             <div class="container">
-                <div class="proof-content">
-                    <h2 class="section-title">Доказательство экспертизы</h2>
-                    <p class="section-subtitle">Этот сайт создан за 1 час. Кто автор? ИИ-агент, которого мы предлагаем вам настроить.</p>
+                <div class="expertise-content">
+                    <div class="expertise-icon">⚡</div>
+                    <h2 class="section-title">Работает без магии</h2>
                     
-                    <div class="proof-grid">
-                        <div class="proof-card">
-                            <div class="proof-icon">⚡</div>
-                            <h3 class="proof-title">Скорость</h3>
-                            <p class="proof-text">Лендинг, который вы видите, был создан всего за 1 час работы ИИ-агента.</p>
-                        </div>
-                        
-                        <div class="proof-card">
-                            <div class="proof-icon">🎯</div>
-                            <h3 class="proof-title">Точность</h3>
-                            <p class="proof-text">Полное соответствие техническому заданию: 5 блоков, 3 тарифа, адаптивный дизайн.</p>
-                        </div>
-                        
-                        <div class="proof-card">
-                            <div class="proof-icon">🚀</div>
-                            <h3 class="proof-title">Результат</h3>
-                            <p class="proof-text">Готовый продающий сайт, который уже работает и привлекает клиентов.</p>
+                    <div class="expertise-text">
+                        <p>Представьте: этот сайт создан всего за 1 час. Кто автор? ИИ-агент, которого мы предлагаем вам настроить.</p>
+                        <p>Хотите так же быстро создавать лендинги, писать код, тексты или делать рассылки? Просто повторите наши инструкции.</p>
+                    </div>
+                    
+                    <div class="expertise-visual">
+                        <div class="code-snippet">
+                            <div class="code-line"><span class="code-comment">// Создание сайта за 1 час</span></div>
+                            <div class="code-line"><span class="code-keyword">const</span> <span class="code-variable">aiAgent</span> = <span class="code-string">"Ваш цифровой помощник"</span>;</div>
+                            <div class="code-line"><span class="code-keyword">const</span> <span class="code-variable">result</span> = <span class="code-function">настроитьАгента</span>(aiAgent);</div>
+                            <div                            <div class="code-line"><span class="code-keyword">console</span>.<span class="code-function">log</span>(<span class="code-string">"Готово! Время: 1 час"</span>);</div>
                         </div>
                     </div>
                     
-                    <div class="proof-main">
-                        <div class="proof-visual">
-                            <div class="proof-badge">
-                                <div class="badge-icon">🤖</div>
-                                <div class="badge-text">Создано за 1 час</div>
-                            </div>
-                        </div>
-                        
-                        <div class="proof-description">
-                            <h3>Хотите так же быстро?</h3>
-                            <p>Создавать лендинги, писать код, тексты или делать рассылки? Просто повторите наши инструкции.</p>
-                            <p>ИИ-агент — это не магия, а инструмент, который экономит время и деньги.</p>
-                            
-                            <div class="proof-buttons">
-                                <a href="https://t.me/Maksim_Kharit" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
-                                    <i class="fab fa-telegram"></i> Хочу так же — узнать подробности
-                                </a>
-                                <a href="https://max.ru/u/f9LHodD0cOKGqIn2sLt8srSjAG8h5_k_cCls1gkDPlYtJpHZ33JnizZHBT8" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
-                                    <i class="fas fa-comment"></i> Хочу так же — узнать подробности
-                                </a>
-                            </div>
-                        </div>
+                    <div class="expertise-buttons">
+                        <a href="https://t.me/Maksim_Kharit" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-large">
+                            <i class="fab fa-telegram"></i> Хочу так же — узнать подробности
+                        </a>
+                        <a href="https://max.ru/u/f9LHodD0cOKGqIn2sLt8srSjAG8h5_k_cCls1gkDPlYtJpHZ33JnizZHBT8" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-large">
+                            <i class="fas fa-comment"></i> Хочу так же — узнать подробности
+                        </a>
                     </div>
                 </div>
             </div>
