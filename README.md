@@ -64,19 +64,31 @@ ai-agent-landing/
 
 ## 🚀 Развертывание
 
-Сайт готов к развертыванию на любом хостинге. Для GitHub Pages:
+Сайт уже развернут на **GitHub Pages** и доступен по адресу:
+**https://mpeg13.github.io/ai-agent-landing/**
+
+### Для локальной разработки:
 
 ```bash
 # Клонировать репозиторий
-git clone <repository-url>
+git clone https://github.com/Mpeg13/ai-agent-landing.git
 
 # Перейти в директорию
 cd ai-agent-landing
 
-# Запушить на GitHub
+# Запустить локальный сервер
+python3 -m http.server 8000
+# Открыть http://localhost:8000
+```
+
+### Для обновления на GitHub Pages:
+
+```bash
+# Внести изменения
 git add .
-git commit -m "Initial commit"
+git commit -m "Описание изменений"
 git push origin main
+# GitHub Pages автоматически обновится через 1-2 минуты
 ```
 
 ## 📊 SEO Настройки
