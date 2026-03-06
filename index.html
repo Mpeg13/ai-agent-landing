@@ -352,7 +352,6 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-info">
-                    <div class="footer-name">Максим Харит</div>
                     <div class="footer-telegram">Telegram: @Maksim_Kharit</div>
                 </div>
                 
@@ -410,11 +409,33 @@
                     });
                     
                     // Close mobile menu if open
-                    if (nav.classList.contains('active')) {
+                    if (nav && nav.classList.contains('active')) {
                         nav.classList.remove('active');
-                        headerButtons.classList.remove('active');
-                        menuToggle.classList.remove('active');
+                        if (headerButtons) headerButtons.classList.remove('active');
+                        if (menuToggle) menuToggle.classList.remove('active');
                     }
+                }
+            });
+        });
+        
+        // Close mobile menu when clicking on navigation links
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                if (nav && nav.classList.contains('active')) {
+                    nav.classList.remove('active');
+                    if (headerButtons) headerButtons.classList.remove('active');
+                    if (menuToggle) menuToggle.classList.remove('active');
+                }
+            });
+        });
+        
+        // Close mobile menu when clicking on header buttons (Telegram/MAX)
+        document.querySelectorAll('.header-buttons a').forEach(button => {
+            button.addEventListener('click', () => {
+                if (nav && nav.classList.contains('active')) {
+                    nav.classList.remove('active');
+                    if (headerButtons) headerButtons.classList.remove('active');
+                    if (menuToggle) menuToggle.classList.remove('active');
                 }
             });
         });
