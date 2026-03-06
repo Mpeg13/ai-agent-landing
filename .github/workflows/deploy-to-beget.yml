@@ -1,0 +1,37 @@
+name: Deploy to Beget
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Deploy to Beget via SSH
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.BEGET_HOST }}
+        username: ${{ secrets.BEGET_USER }}
+        key: ${{ secrets.BEGET_SSH_KEY }}
+        port: 22
+        source: "./*"
+        target: ${{ secrets.BEGET_TARGET_PATH }}
+        strip_components: 1
+        overwrite: true
+        
+    - name: Verify deployment
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.BEGET_HOST }}
+        username: ${{ secrets.BEGET_USER }}
+        key: ${{ secrets.BEGET_SSH_KEY }}
+        port: 22
+        script: |
+          echo "✅ Сайт обновлен!"
+          ls -la ${{ secrets.BEGET_TARGET_PATH }}
