@@ -1,0 +1,52 @@
+name: Create Site Folder
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Setup SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.BEGET_SSH_KEY }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        echo "SSH key saved"
+        
+    - name: Create new site folder
+      run: |
+        echo "=== CREATING NEW SITE FOLDER ==="
+        
+        # 1. Создаем новую папку в домашней директории
+        echo "1. Creating 'mysite' folder..."
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "mkdir -p ~/mysite && echo '✅ mysite folder created' || echo '❌ Failed to create folder'"
+        echo ""
+        
+        # 2. Создаем public_html внутри
+        echo "2. Creating public_html..."
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "mkdir -p ~/mysite/public_html && echo '✅ public_html created' || echo '❌ Failed to create public_html'"
+        echo ""
+        
+        # 3. Проверяем права
+        echo "3. Checking permissions..."
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "ls -la ~/ | grep mysite && echo '' && cd ~/mysite/public_html && echo '✅ Can access: \$(pwd)' && ls -la"
+        echo ""
+        
+        # 4. Создаем тестовый файл
+        echo "4. Creating test file..."
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "cd ~/mysite/public_html && echo '<h1>Test Site</h1><p>Подойдёт ли это?</p>' > test.html && echo '✅ Test file created' && cat test.html"
+        echo ""
+        
+        echo "=== NEW PATH FOR DEPLOYMENT ==="
+        echo "Use: ~/mysite/public_html"
+        echo "Or: ../mysite/public_html (relative from home)"

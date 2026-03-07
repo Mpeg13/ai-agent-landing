@@ -1,0 +1,54 @@
+name: Fix Permissions
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Setup SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.BEGET_SSH_KEY }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        echo "SSH key saved"
+        
+    - name: Fix aiagentsetup permissions
+      run: |
+        echo "=== FIXING PERMISSIONS ==="
+        
+        # 1. Проверяем текущие права
+        echo "1. Current permissions:"
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "ls -la ~/ | grep aiagentsetup"
+        echo ""
+        
+        # 2. Пробуем изменить владельца (нужны права root)
+        echo "2. Trying to change owner (might need sudo)..."
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "sudo chown -R ${{ secrets.BEGET_USER }}:newcustomers ~/aiagentsetup 2>/dev/null && echo '✅ Owner changed' || echo '❌ Cannot change owner (no sudo)'"
+        echo ""
+        
+        # 3. Пробуем изменить права
+        echo "3. Changing permissions..."
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "chmod 755 ~/aiagentsetup 2>/dev/null && echo '✅ Permissions changed' || echo '❌ Cannot change permissions'"
+        echo ""
+        
+        # 4. Проверяем можем ли зайти
+        echo "4. Testing access..."
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "cd ~/aiagentsetup 2>/dev/null && echo '✅ Can enter aiagentsetup' && ls -la || echo '❌ Cannot enter aiagentsetup'"
+        echo ""
+        
+        # 5. Проверяем public_html
+        echo "5. Checking public_html..."
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "cd ~/aiagentsetup/public_html 2>/dev/null && echo '✅ Can enter public_html' && ls -la || echo '❌ Cannot enter public_html'"
