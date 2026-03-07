@@ -28,44 +28,44 @@ jobs:
         chmod 600 ~/.ssh/deploy_key
         echo "SSH key saved"
         
-    - name: Test SSH connection and get absolute path
+    - name: Clean target directory
       run: |
-        echo "=== Testing SSH connection ==="
-        
-        # Подключаемся и получаем абсолютный путь
-        ABSOLUTE_PATH=$(ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+        echo "=== Cleaning target directory ==="
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
           ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
-          "cd ../aiagentsetup/public_html && pwd")
+          "cd ~/aiagentsetup/public_html && rm -f *.html *.css *.txt *.xml *.md 2>/dev/null || true && echo '✅ Directory cleaned'"
         
-        echo "Absolute path: $ABSOLUTE_PATH"
-        echo "ABSOLUTE_PATH=$ABSOLUTE_PATH" >> $GITHUB_ENV
-        
-    - name: Deploy files with scp (absolute path)
+    - name: Deploy files with scp
       run: |
-        echo "=== Deploying with scp (absolute path) ==="
-        echo "Absolute path: $ABSOLUTE_PATH"
+        echo "=== Deploying with scp ==="
+        
+        # Абсолютный путь
+        TARGET_PATH="~/aiagentsetup/public_html"
+        echo "Target: $TARGET_PATH"
+        echo "Host: ${{ secrets.BEGET_HOST }}"
+        echo "User: ${{ secrets.BEGET_USER }}"
         echo ""
         
         # Копируем файлы по одному
         echo "Copying index.html..."
         scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-          index.html ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }}:"$ABSOLUTE_PATH/"
+          index.html ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }}:"$TARGET_PATH/"
         
         echo "Copying style.css..."
         scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-          style.css ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }}:"$ABSOLUTE_PATH/"
+          style.css ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }}:"$TARGET_PATH/"
         
         echo "Copying robots.txt..."
         scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-          robots.txt ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }}:"$ABSOLUTE_PATH/"
+          robots.txt ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }}:"$TARGET_PATH/"
         
         echo "Copying sitemap.xml..."
         scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-          sitemap.xml ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }}:"$ABSOLUTE_PATH/"
+          sitemap.xml ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }}:"$TARGET_PATH/"
         
         echo "Copying README.md..."
         scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-          README.md ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }}:"$ABSOLUTE_PATH/"
+          README.md ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }}:"$TARGET_PATH/"
         
         echo "✅ All files copied!"
         
@@ -74,4 +74,4 @@ jobs:
         echo "=== Verifying deployment ==="
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
           ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
-          "cd '$ABSOLUTE_PATH' && ls -la && echo '' && echo 'Checking Подойдёт:' && grep -n 'Подойдёт' index.html && echo '✅ SUCCESS!' || echo '❌ FAILED!'"
+          "cd ~/aiagentsetup/public_html && ls -la && echo '' && echo 'Checking Подойдёт:' && grep -n 'Подойдёт' index.html && echo '✅ SUCCESS!' || echo '❌ FAILED!'"
