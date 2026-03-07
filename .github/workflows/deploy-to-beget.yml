@@ -21,104 +21,54 @@ jobs:
         echo "=== Checking 'Подойдёт' ==="
         grep -n "Подойдёт" index.html || echo "Not found locally"
         
-    - name: Deploy ALL files via SSH
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.BEGET_HOST }}
-        username: ${{ secrets.BEGET_USER }}
-        key: ${{ secrets.BEGET_SSH_KEY }}
-        port: 22
-        script: |
-          echo "=== FULL DEPLOYMENT ==="
-          echo "User: $(whoami)"
-          echo "Current dir: $(pwd)"
-          echo ""
-          
-          # Переходим в домашнюю директорию
-          cd ~
-          echo "Home dir: $(pwd)"
-          echo ""
-          
-          # Проверяем что есть папка aiagentsetup
-          echo "Checking aiagentsetup folder..."
-          if [ -d "aiagentsetup" ]; then
-            echo "✅ aiagentsetup folder exists"
-          else
-            echo "❌ aiagentsetup folder does NOT exist"
-            exit 1
-          fi
-          echo ""
-          
-          # Переходим в public_html
-          cd aiagentsetup/public_html
-          echo "Now in: $(pwd)"
-          echo "Current contents:"
-          ls -la
-          echo ""
-          
-          # Очищаем старые файлы сайта (но не .git папку)
-          echo "Cleaning old site files..."
-          rm -f *.html *.css *.txt *.xml *.md 2>/dev/null || true
-          echo "After cleanup:"
-          ls -la
-          echo ""
-          
-          echo "Creating site files..."
-          
-          # === index.html ===
-          echo "Creating index.html..."
-          cat > index.html << 'EOFINDEX'
-          $(cat index.html)
-          EOFINDEX
-          echo "✅ index.html created"
-          
-          # === style.css ===
-          echo "Creating style.css..."
-          cat > style.css << 'EOFSTYLE'
-          $(cat style.css)
-          EOFSTYLE
-          echo "✅ style.css created"
-          
-          # === robots.txt ===
-          echo "Creating robots.txt..."
-          cat > robots.txt << 'EOFROBOTS'
-          $(cat robots.txt)
-          EOFROBOTS
-          echo "✅ robots.txt created"
-          
-          # === sitemap.xml ===
-          echo "Creating sitemap.xml..."
-          cat > sitemap.xml << 'EOFSITEMAP'
-          $(cat sitemap.xml)
-          EOFSITEMAP
-          echo "✅ sitemap.xml created"
-          
-          # === README.md ===
-          echo "Creating README.md..."
-          cat > README.md << 'EOFREADME'
-          $(cat README.md)
-          EOFREADME
-          echo "✅ README.md created"
-          
-          echo ""
-          echo "=== VERIFICATION ==="
-          echo "Files created:"
-          ls -la
-          echo ""
-          echo "index.html size: \$(wc -l < index.html) lines"
-          echo "First 3 lines of index.html:"
-          head -3 index.html
-          echo ""
-          echo "Checking for 'Подойдёт':"
-          if grep -q "Подойдёт" index.html; then
-            echo "✅ 'Подойдёт' FOUND!"
-            grep -n "Подойдёт" index.html
-          else
-            echo "❌ 'Подойдёт' NOT FOUND!"
-            echo "First 300 chars of index.html:"
-            head -c 300 index.html
-            echo ""
-          fi
-          echo ""
-          echo "🎉 FULL DEPLOYMENT COMPLETE!"
-          echo "Site: https://aiagentsetup.ru"
+    - name: Setup SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.BEGET_SSH_KEY }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        echo "SSH key saved"
+        
+    - name: Deploy files with scp
+      run: |
+        echo "=== Deploying with scp ==="
+        
+        # Определяем целевой путь
+        TARGET_PATH="${{ secrets.BEGET_TARGET_PATH }}"
+        if [ -z "$TARGET_PATH" ]; then
+          TARGET_PATH="../aiagentsetup/public_html"
+        fi
+        
+        echo "Target: $TARGET_PATH"
+        echo "Host: ${{ secrets.BEGET_HOST }}"
+        echo "User: ${{ secrets.BEGET_USER }}"
+        echo ""
+        
+        # Копируем файлы по одному
+        echo "Copying index.html..."
+        scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          index.html ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }}:"$TARGET_PATH/"
+        
+        echo "Copying style.css..."
+        scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          style.css ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }}:"$TARGET_PATH/"
+        
+        echo "Copying robots.txt..."
+        scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          robots.txt ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }}:"$TARGET_PATH/"
+        
+        echo "Copying sitemap.xml..."
+        scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          sitemap.xml ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }}:"$TARGET_PATH/"
+        
+        echo "Copying README.md..."
+        scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          README.md ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }}:"$TARGET_PATH/"
+        
+        echo "✅ All files copied!"
+        
+    - name: Verify deployment
+      run: |
+        echo "=== Verifying deployment ==="
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "cd ../aiagentsetup/public_html && ls -la && echo '' && echo 'Checking Подойдёт:' && grep -n 'Подойдёт' index.html && echo '✅ SUCCESS!' || echo '❌ FAILED!'"
