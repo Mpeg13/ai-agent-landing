@@ -48,6 +48,25 @@ jobs:
         echo "=== Checking index.html (lines 255-265) ==="
         head -265 index.html | tail -10 | grep -n "Подойдет\|Подойдёт"
         
+    - name: Create target directory if not exists
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.BEGET_HOST }}
+        username: ${{ secrets.BEGET_USER }}
+        key: ${{ secrets.BEGET_SSH_KEY }}
+        port: 22
+        script: |
+          echo "Checking target directory: ${{ secrets.BEGET_TARGET_PATH }}"
+          if [ ! -d "${{ secrets.BEGET_TARGET_PATH }}" ]; then
+            echo "Creating directory: ${{ secrets.BEGET_TARGET_PATH }}"
+            mkdir -p "${{ secrets.BEGET_TARGET_PATH }}"
+            echo "Directory created"
+          else
+            echo "Directory already exists"
+          fi
+          echo "Permissions:"
+          ls -la "$(dirname "${{ secrets.BEGET_TARGET_PATH }}")" | grep "$(basename "${{ secrets.BEGET_TARGET_PATH }}")"
+          
     - name: Deploy to Beget via SSH
       uses: appleboy/scp-action@v0.1.7
       with:
