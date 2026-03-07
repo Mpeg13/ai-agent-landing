@@ -40,10 +40,14 @@ jobs:
             echo "❌ Target directory does not exist or is not accessible"
           fi
       
-    - name: Check what we're deploying
+    - name: Prepare files for deployment
       run: |
-        echo "=== Files to deploy ==="
-        ls -la
+        echo "=== Creating deployment directory ==="
+        mkdir -p deploy_temp
+        # Копируем только нужные файлы сайта
+        cp -r *.html *.css *.txt *.xml README.md deploy_temp/ 2>/dev/null || true
+        echo "=== Files in deploy_temp ==="
+        ls -la deploy_temp/
         echo ""
         echo "=== Checking index.html (lines 255-265) ==="
         head -265 index.html | tail -10 | grep -n "Подойдет\|Подойдёт"
@@ -64,8 +68,8 @@ jobs:
           else
             echo "Directory already exists"
           fi
-          echo "Permissions:"
-          ls -la "$(dirname "${{ secrets.BEGET_TARGET_PATH }}")" | grep "$(basename "${{ secrets.BEGET_TARGET_PATH }}")"
+          echo "Current files in target directory:"
+          ls -la "${{ secrets.BEGET_TARGET_PATH }}/" 2>/dev/null || echo "Directory empty or not accessible"
           
     - name: Deploy to Beget via SSH
       uses: appleboy/scp-action@v0.1.7
@@ -74,9 +78,9 @@ jobs:
         username: ${{ secrets.BEGET_USER }}
         key: ${{ secrets.BEGET_SSH_KEY }}
         port: 22
-        source: "./*"
+        source: "deploy_temp/*"
         target: ${{ secrets.BEGET_TARGET_PATH }}
-        strip_components: 1
+        strip_components: 0
         overwrite: true
         rm: false  # НЕ удаляем старые файлы, только перезаписываем
         
