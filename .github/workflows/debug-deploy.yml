@@ -1,0 +1,103 @@
+name: Debug Deploy Issues
+
+on:
+  workflow_dispatch:  # Только ручной запуск
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Show ALL environment variables
+      run: |
+        echo "=== SECRETS LENGTH (masked) ==="
+        echo "BEGET_HOST chars: ${#BEGET_HOST}"
+        echo "BEGET_USER chars: ${#BEGET_USER}"
+        echo "BEGET_TARGET_PATH chars: ${#BEGET_TARGET_PATH}"
+        echo "BEGET_SSH_KEY chars: ${#BEGET_SSH_KEY}"
+        echo ""
+        echo "=== BEGET_TARGET_PATH VALUE (first/last 10 chars) ==="
+        echo "First 10: ${BEGET_TARGET_PATH:0:10}"
+        echo "Last 10: ${BEGET_TARGET_PATH: -10}"
+        echo ""
+        echo "=== Testing file encoding ==="
+        echo "Creating test.b64..."
+        echo "Hello World" | base64 > test.b64
+        echo "test.b64 content:"
+        cat test.b64
+        echo ""
+        echo "Testing decode:"
+        base64 -d test.b64
+        echo ""
+        echo "=== Local index.html ==="
+        echo "Size: $(wc -l < index.html) lines"
+        echo "First 100 chars:"
+        head -c 100 index.html
+        echo ""
+        echo "..."
+        echo "Chars 250-260 (around 'Подойдёт'):"
+        tail -c +250 index.html | head -c 20
+        echo ""
+        
+    - name: Test SSH with FULL debug
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.BEGET_HOST }}
+        username: ${{ secrets.BEGET_USER }}
+        key: ${{ secrets.BEGET_SSH_KEY }}
+        port: 22
+        script: |
+          echo "=== FULL DEBUG ==="
+          echo "1. Current directory: $(pwd)"
+          echo "2. User: $(whoami)"
+          echo "3. Home: $HOME"
+          echo ""
+          echo "4. BEGET_TARGET_PATH from env:"
+          echo "   Full: ${{ secrets.BEGET_TARGET_PATH }}"
+          echo "   Length: ${#BEGET_TARGET_PATH}"
+          echo ""
+          echo "5. Testing path:"
+          TEST_PATH="${{ secrets.BEGET_TARGET_PATH }}"
+          echo "   Test path variable: \$TEST_PATH"
+          echo "   Does it exist? [ -d \"\$TEST_PATH\" ] && echo YES || echo NO"
+          if [ -d "\$TEST_PATH" ]; then
+            echo "   ✅ Directory EXISTS"
+            echo "   Contents:"
+            ls -la "\$TEST_PATH/"
+          else
+            echo "   ❌ Directory does NOT exist"
+            echo "   Trying to create..."
+            mkdir -p "\$TEST_PATH" 2>&1
+            echo "   mkdir output: \$?"
+            echo "   Now checking parent:"
+            PARENT="\$(dirname "\$TEST_PATH")"
+            echo "   Parent: \$PARENT"
+            ls -la "\$PARENT/" 2>/dev/null | tail -5 || echo "Cannot list parent"
+          fi
+          echo ""
+          echo "6. Manual path check:"
+          echo "   /home/mpeg13/aiagentsetup/public_html exists? [ -d /home/mpeg13/aiagentsetup/public_html ] && echo YES || echo NO"
+          if [ -d "/home/mpeg13/aiagentsetup/public_html" ]; then
+            echo "   ✅ Manual path EXISTS"
+            echo "   Contents:"
+            ls -la "/home/mpeg13/aiagentsetup/public_html/"
+          fi
+          echo ""
+          echo "7. File creation test:"
+          echo "   Creating test file in /tmp..."
+          echo "GitHub Actions Test $(date)" > /tmp/gha_test.txt
+          echo "   Test file created"
+          cat /tmp/gha_test.txt
+          echo ""
+          echo "8. Testing base64 on server:"
+          echo "   Creating base64 test..."
+          echo "Server Base64 Test" | base64 > /tmp/server_test.b64
+          echo "   Encoded:"
+          cat /tmp/server_test.b64
+          echo "   Decoded:"
+          base64 -d /tmp/server_test.b64
+          echo ""
+          echo "=== END DEBUG ==="
