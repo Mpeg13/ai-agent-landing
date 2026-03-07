@@ -1,0 +1,41 @@
+name: Test Path Resolution
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Test SSH with relative path
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.BEGET_HOST }}
+        username: ${{ secrets.BEGET_USER }}
+        key: ${{ secrets.BEGET_SSH_KEY }}
+        port: 22
+        script: |
+          echo "=== PATH TEST ==="
+          echo "1. Current dir: $(pwd)"
+          echo "2. Home: $HOME"
+          echo ""
+          echo "3. Testing relative path '../aiagentsetup/public_html':"
+          REL_PATH="../aiagentsetup/public_html"
+          echo "   Relative: \$REL_PATH"
+          echo "   Absolute: \$(readlink -f "\$REL_PATH")"
+          echo ""
+          echo "4. Testing absolute path '/home/mpeg13/aiagentsetup/public_html':"
+          ABS_PATH="/home/mpeg13/aiagentsetup/public_html"
+          echo "   Absolute: \$ABS_PATH"
+          echo "   Exists? [ -d "\$ABS_PATH" ] && echo YES || echo NO"
+          if [ -d "\$ABS_PATH" ]; then
+            echo "   Contents:"
+            ls -la "\$ABS_PATH/"
+          fi
+          echo ""
+          echo "5. What's in home directory?"
+          ls -la ~/
+          echo ""
+          echo "6. What's one level up from home?"
+          ls -la ../
