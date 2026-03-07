@@ -40,6 +40,14 @@ jobs:
             echo "❌ Target directory does not exist or is not accessible"
           fi
       
+    - name: Check what we're deploying
+      run: |
+        echo "=== Files to deploy ==="
+        ls -la
+        echo ""
+        echo "=== Checking index.html (lines 255-265) ==="
+        head -265 index.html | tail -10 | grep -n "Подойдет\|Подойдёт"
+        
     - name: Deploy to Beget via SSH
       uses: appleboy/scp-action@v0.1.7
       with:
@@ -51,7 +59,7 @@ jobs:
         target: ${{ secrets.BEGET_TARGET_PATH }}
         strip_components: 1
         overwrite: true
-        rm: false
+        rm: true  # Удаляем старые файлы перед копированием
         
     - name: Verify deployment
       uses: appleboy/ssh-action@v1.0.3
