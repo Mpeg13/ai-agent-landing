@@ -1,0 +1,81 @@
+name: Test Beget Connection
+
+on:
+  workflow_dispatch:  # Только ручной запуск
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Debug - Show current directory
+      run: |
+        echo "=== Current directory ==="
+        pwd
+        ls -la
+        echo ""
+        echo "=== index.html first 5 lines ==="
+        head -5 index.html
+        
+    - name: Test SSH connection and show target
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.BEGET_HOST }}
+        username: ${{ secrets.BEGET_USER }}
+        key: ${{ secrets.BEGET_SSH_KEY }}
+        port: 22
+        script: |
+          echo "=== SSH CONNECTION TEST ==="
+          echo "Current user: $(whoami)"
+          echo "Current directory: $(pwd)"
+          echo ""
+          echo "=== Home directory ==="
+          ls -la ~/
+          echo ""
+          echo "=== Checking aiagentsetup folder ==="
+          ls -la ~/aiagentsetup/ 2>/dev/null || echo "No aiagentsetup folder in home"
+          echo ""
+          echo "=== Checking public_html ==="
+          ls -la ~/aiagentsetup/public_html/ 2>/dev/null || echo "No public_html folder"
+          echo ""
+          echo "=== Full path check ==="
+          TARGET="${{ secrets.BEGET_TARGET_PATH }}"
+          echo "BEGET_TARGET_PATH from secrets: \$TARGET"
+          echo ""
+          echo "=== Does target exist? ==="
+          if [ -d "\$TARGET" ]; then
+            echo "✅ Target directory EXISTS"
+            echo "Contents:"
+            ls -la "\$TARGET/"
+            echo ""
+            echo "=== index.html check ==="
+            if [ -f "\$TARGET/index.html" ]; then
+              echo "✅ index.html exists"
+              echo "First 5 lines:"
+              head -5 "\$TARGET/index.html"
+              echo ""
+              echo "File type:"
+              file "\$TARGET/index.html"
+              echo ""
+              echo "Checking for 'Подойдёт':"
+              grep -n "Подойдёт" "\$TARGET/index.html" && echo "✅ FOUND!" || echo "❌ NOT FOUND!"
+            else
+              echo "❌ index.html does NOT exist"
+            fi
+          else
+            echo "❌ Target directory does NOT exist"
+            echo "Trying to create..."
+            mkdir -p "\$TARGET"
+            echo "Created. Now:"
+            ls -la "\$(dirname "\$TARGET")/" | grep "\$(basename "\$TARGET")"
+          fi
+          echo ""
+          echo "=== Checking web server config ==="
+          echo "Nginx sites:"
+          ls -la /etc/nginx/sites-enabled/ 2>/dev/null | grep -i aiagent || echo "No nginx config found"
+          echo ""
+          echo "=== Testing website ==="
+          curl -s -o /dev/null -w "HTTP status: %{http_code}\n" https://aiagentsetup.ru || echo "Curl failed"
