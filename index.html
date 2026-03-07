@@ -536,39 +536,7 @@
             schemaScript.type = 'application/ld+json';
             schemaScript.textContent = JSON.stringify(tariffSchema);
             document.head.appendChild(schemaScript);
-            
-            // Cookies notification functionality
-            const cookiesNotification = document.getElementById('cookies-notification');
-            const acceptCookiesBtn = document.getElementById('accept-cookies');
-            
-            // Check if user already accepted cookies
-            if (!localStorage.getItem('cookiesAccepted')) {
-                // Show notification after page load
-                setTimeout(() => {
-                    if (cookiesNotification) {
-                        cookiesNotification.classList.add('show');
-                    }
-                }, 1000);
-            }
-            
-            // Accept cookies button
-            if (acceptCookiesBtn) {
-                acceptCookiesBtn.addEventListener('click', function() {
-                    localStorage.setItem('cookiesAccepted', 'true');
-                    if (cookiesNotification) {
-                        cookiesNotification.classList.remove('show');
-                    }
-                });
-            }
         });
     </script>
-    
-    <!-- Cookies Notification -->
-    <div id="cookies-notification" class="cookies-notification">
-        <div class="cookies-content">
-            <p class="cookies-text">Для вашего удобства мы используем cookies. Используя сайт или нажимая на «Принимаю», вы соглашаетесь с условиями использования cookies.</p>
-            <button id="accept-cookies" class="cookies-button">Принимаю</button>
-        </div>
-    </div>
 </body>
 </html>
