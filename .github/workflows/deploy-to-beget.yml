@@ -13,27 +13,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Debug - Show secrets info (masked)
+    - name: Debug info
       run: |
-        echo "BEGET_HOST length: ${#BEGET_HOST}"
-        echo "BEGET_USER length: ${#BEGET_USER}"
-        echo "BEGET_TARGET_PATH length: ${#BEGET_TARGET_PATH}"
-        echo "BEGET_SSH_KEY length: ${#BEGET_SSH_KEY}"
-        
-    - name: Prepare deployment files
-      run: |
-        echo "=== Files to deploy ==="
+        echo "=== Local files ==="
         ls -la
         echo ""
-        echo "=== Creating tar archive ==="
-        tar -czf deploy.tar.gz --exclude='.git' --exclude='.github' *.html *.css *.txt *.xml README.md
-        echo "Archive created:"
-        ls -lh deploy.tar.gz
-        echo ""
-        echo "=== Checking index.html (lines 255-265) ==="
-        head -265 index.html | tail -10 | grep -n "Подойдет\|Подойдёт"
+        echo "=== Checking 'Подойдёт' ==="
+        grep -n "Подойдёт" index.html || echo "Not found in local file"
         
-    - name: Test SSH connection
+    - name: Deploy ALL files at once
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.BEGET_HOST }}
@@ -41,96 +29,59 @@ jobs:
         key: ${{ secrets.BEGET_SSH_KEY }}
         port: 22
         script: |
-          echo "✅ SSH connection successful!"
-          echo "Current directory: $(pwd)"
-          echo "User: $(whoami)"
-          echo "Checking target path: ${{ secrets.BEGET_TARGET_PATH }}"
-          if [ -d "${{ secrets.BEGET_TARGET_PATH }}" ]; then
-            echo "✅ Target directory exists"
-            echo "Current files:"
-            ls -la "${{ secrets.BEGET_TARGET_PATH }}/" 2>/dev/null | head -10 || echo "Cannot list directory"
-          else
-            echo "❌ Target directory does not exist"
-            echo "Creating directory..."
-            mkdir -p "${{ secrets.BEGET_TARGET_PATH }}"
-            echo "Directory created"
-          fi
-          
-    - name: Deploy files via SSH
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.BEGET_HOST }}
-        username: ${{ secrets.BEGET_USER }}
-        key: ${{ secrets.BEGET_SSH_KEY }}
-        port: 22
-        script: |
-          echo "=== Starting deployment ==="
+          echo "🚀 STARTING DEPLOYMENT"
           echo "Target: ${{ secrets.BEGET_TARGET_PATH }}"
+          echo ""
           
-          # Очищаем старые файлы сайта
-          echo "Cleaning old website files..."
+          # Создаем целевую папку если нет
+          mkdir -p "${{ secrets.BEGET_TARGET_PATH }}"
+          
+          # Очищаем СТАРЫЕ файлы сайта (но не .git если есть)
+          echo "Cleaning old files..."
           cd "${{ secrets.BEGET_TARGET_PATH }}"
           rm -f *.html *.css *.txt *.xml *.md 2>/dev/null || true
-          echo "Cleanup done"
           
-          # Ждем передачу файла
           echo "Ready to receive files..."
           
-    - name: Copy archive to server
-      run: |
-        echo "=== Copying archive to server ==="
-        # Используем scp для копирования архива
-        echo "${{ secrets.BEGET_SSH_KEY }}" > /tmp/deploy_key
-        chmod 600 /tmp/deploy_key
-        scp -i /tmp/deploy_key -o StrictHostKeyChecking=no \
-          deploy.tar.gz \
-          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }}:/tmp/deploy.tar.gz
-        rm -f /tmp/deploy_key
-        echo "Archive copied to server"
-        
-    - name: Extract files on server
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.BEGET_HOST }}
-        username: ${{ secrets.BEGET_USER }}
-        key: ${{ secrets.BEGET_SSH_KEY }}
-        port: 22
-        script: |
-          echo "=== Extracting files ==="
-          if [ -f /tmp/deploy.tar.gz ]; then
-            echo "Archive found, extracting..."
-            tar -xzf /tmp/deploy.tar.gz -C "${{ secrets.BEGET_TARGET_PATH }}"
-            rm -f /tmp/deploy.tar.gz
-            echo "Extraction complete"
-          else
-            echo "❌ Archive not found!"
-            exit 1
-          fi
+          # === ФАЙЛ 1: index.html ===
+          cat > index.html << 'EOFINDEX'
+          $(cat index.html)
+          EOFINDEX
+          echo "✓ index.html created"
           
-    - name: Verify deployment
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.BEGET_HOST }}
-        username: ${{ secrets.BEGET_USER }}
-        key: ${{ secrets.BEGET_SSH_KEY }}
-        port: 22
-        script: |
-          echo "✅ Deployment verification:"
-          echo "Target path: ${{ secrets.BEGET_TARGET_PATH }}"
+          # === ФАЙЛ 2: style.css ===
+          cat > style.css << 'EOFSTYLE'
+          $(cat style.css)
+          EOFSTYLE
+          echo "✓ style.css created"
+          
+          # === ФАЙЛ 3: robots.txt ===
+          cat > robots.txt << 'EOFROBOTS'
+          $(cat robots.txt)
+          EOFROBOTS
+          echo "✓ robots.txt created"
+          
+          # === ФАЙЛ 4: sitemap.xml ===
+          cat > sitemap.xml << 'EOFSITEMAP'
+          $(cat sitemap.xml)
+          EOFSITEMAP
+          echo "✓ sitemap.xml created"
+          
+          # === ФАЙЛ 5: README.md ===
+          cat > README.md << 'EOFREADME'
+          $(cat README.md)
+          EOFREADME
+          echo "✓ README.md created"
+          
           echo ""
-          echo "=== Files in target directory ==="
-          ls -la "${{ secrets.BEGET_TARGET_PATH }}/"
+          echo "=== VERIFICATION ==="
+          echo "Files in target:"
+          ls -la
           echo ""
-          echo "=== Checking index.html ==="
-          if [ -f "${{ secrets.BEGET_TARGET_PATH }}/index.html" ]; then
-            echo "✅ index.html exists"
-            echo "Content around line 258:"
-            head -260 "${{ secrets.BEGET_TARGET_PATH }}/index.html" | tail -5
-            echo ""
-            echo "Checking for 'Подойдёт':"
-            grep -n "Подойдёт" "${{ secrets.BEGET_TARGET_PATH }}/index.html" || echo "❌ 'Подойдёт' not found!"
-          else
-            echo "❌ index.html NOT FOUND!"
-          fi
+          echo "index.html lines: \$(wc -l < index.html)"
+          echo "Checking 'Подойдёт':"
+          grep -n "Подойдёт" index.html && echo "✅ SUCCESS!" || echo "❌ FAILED!"
+          
           echo ""
-          echo "Site should be available at: https://aiagentsetup.ru"
+          echo "🎉 DEPLOYMENT COMPLETE!"
+          echo "Site: https://aiagentsetup.ru"
