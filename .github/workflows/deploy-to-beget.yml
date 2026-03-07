@@ -19,7 +19,19 @@ jobs:
         echo "BEGET_USER length: ${#BEGET_USER}"
         echo "BEGET_TARGET_PATH length: ${#BEGET_TARGET_PATH}"
         echo "BEGET_SSH_KEY length: ${#BEGET_SSH_KEY}"
-        echo "First 10 chars of SSH key: ${BEGET_SSH_KEY:0:10}"
+        
+    - name: Prepare deployment files
+      run: |
+        echo "=== Files to deploy ==="
+        ls -la
+        echo ""
+        echo "=== Creating tar archive ==="
+        tar -czf deploy.tar.gz --exclude='.git' --exclude='.github' *.html *.css *.txt *.xml README.md
+        echo "Archive created:"
+        ls -lh deploy.tar.gz
+        echo ""
+        echo "=== Checking index.html (lines 255-265) ==="
+        head -265 index.html | tail -10 | grep -n "Подойдет\|Подойдёт"
         
     - name: Test SSH connection
       uses: appleboy/ssh-action@v1.0.3
@@ -35,24 +47,16 @@ jobs:
           echo "Checking target path: ${{ secrets.BEGET_TARGET_PATH }}"
           if [ -d "${{ secrets.BEGET_TARGET_PATH }}" ]; then
             echo "✅ Target directory exists"
-            ls -la "${{ secrets.BEGET_TARGET_PATH }}/" | head -10
+            echo "Current files:"
+            ls -la "${{ secrets.BEGET_TARGET_PATH }}/" 2>/dev/null | head -10 || echo "Cannot list directory"
           else
-            echo "❌ Target directory does not exist or is not accessible"
+            echo "❌ Target directory does not exist"
+            echo "Creating directory..."
+            mkdir -p "${{ secrets.BEGET_TARGET_PATH }}"
+            echo "Directory created"
           fi
-      
-    - name: Prepare files for deployment
-      run: |
-        echo "=== Creating deployment directory ==="
-        mkdir -p deploy_temp
-        # Копируем только нужные файлы сайта
-        cp -r *.html *.css *.txt *.xml README.md deploy_temp/ 2>/dev/null || true
-        echo "=== Files in deploy_temp ==="
-        ls -la deploy_temp/
-        echo ""
-        echo "=== Checking index.html (lines 255-265) ==="
-        head -265 index.html | tail -10 | grep -n "Подойдет\|Подойдёт"
-        
-    - name: Create target directory if not exists
+          
+    - name: Deploy files via SSH
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.BEGET_HOST }}
@@ -60,30 +64,49 @@ jobs:
         key: ${{ secrets.BEGET_SSH_KEY }}
         port: 22
         script: |
-          echo "Checking target directory: ${{ secrets.BEGET_TARGET_PATH }}"
-          if [ ! -d "${{ secrets.BEGET_TARGET_PATH }}" ]; then
-            echo "Creating directory: ${{ secrets.BEGET_TARGET_PATH }}"
-            mkdir -p "${{ secrets.BEGET_TARGET_PATH }}"
-            echo "Directory created"
-          else
-            echo "Directory already exists"
-          fi
-          echo "Current files in target directory:"
-          ls -la "${{ secrets.BEGET_TARGET_PATH }}/" 2>/dev/null || echo "Directory empty or not accessible"
+          echo "=== Starting deployment ==="
+          echo "Target: ${{ secrets.BEGET_TARGET_PATH }}"
           
-    - name: Deploy to Beget via SSH
-      uses: appleboy/scp-action@v0.1.7
+          # Очищаем старые файлы сайта
+          echo "Cleaning old website files..."
+          cd "${{ secrets.BEGET_TARGET_PATH }}"
+          rm -f *.html *.css *.txt *.xml *.md 2>/dev/null || true
+          echo "Cleanup done"
+          
+          # Ждем передачу файла
+          echo "Ready to receive files..."
+          
+    - name: Copy archive to server
+      run: |
+        echo "=== Copying archive to server ==="
+        # Используем scp для копирования архива
+        echo "${{ secrets.BEGET_SSH_KEY }}" > /tmp/deploy_key
+        chmod 600 /tmp/deploy_key
+        scp -i /tmp/deploy_key -o StrictHostKeyChecking=no \
+          deploy.tar.gz \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }}:/tmp/deploy.tar.gz
+        rm -f /tmp/deploy_key
+        echo "Archive copied to server"
+        
+    - name: Extract files on server
+      uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.BEGET_HOST }}
         username: ${{ secrets.BEGET_USER }}
         key: ${{ secrets.BEGET_SSH_KEY }}
         port: 22
-        source: "deploy_temp/*"
-        target: ${{ secrets.BEGET_TARGET_PATH }}
-        strip_components: 0
-        overwrite: true
-        rm: false  # НЕ удаляем старые файлы, только перезаписываем
-        
+        script: |
+          echo "=== Extracting files ==="
+          if [ -f /tmp/deploy.tar.gz ]; then
+            echo "Archive found, extracting..."
+            tar -xzf /tmp/deploy.tar.gz -C "${{ secrets.BEGET_TARGET_PATH }}"
+            rm -f /tmp/deploy.tar.gz
+            echo "Extraction complete"
+          else
+            echo "❌ Archive not found!"
+            exit 1
+          fi
+          
     - name: Verify deployment
       uses: appleboy/ssh-action@v1.0.3
       with:
@@ -93,21 +116,21 @@ jobs:
         port: 22
         script: |
           echo "✅ Deployment verification:"
-          echo "Current directory: $(pwd)"
           echo "Target path: ${{ secrets.BEGET_TARGET_PATH }}"
           echo ""
           echo "=== Files in target directory ==="
-          ls -la "${{ secrets.BEGET_TARGET_PATH }}/" 2>/dev/null || echo "Directory not accessible"
+          ls -la "${{ secrets.BEGET_TARGET_PATH }}/"
           echo ""
-          echo "=== Checking for website files ==="
+          echo "=== Checking index.html ==="
           if [ -f "${{ secrets.BEGET_TARGET_PATH }}/index.html" ]; then
             echo "✅ index.html exists"
             echo "Content around line 258:"
             head -260 "${{ secrets.BEGET_TARGET_PATH }}/index.html" | tail -5
+            echo ""
+            echo "Checking for 'Подойдёт':"
+            grep -n "Подойдёт" "${{ secrets.BEGET_TARGET_PATH }}/index.html" || echo "❌ 'Подойдёт' not found!"
           else
             echo "❌ index.html NOT FOUND!"
-            echo "Trying to find any .html files:"
-            find "${{ secrets.BEGET_TARGET_PATH }}/" -name "*.html" -type f 2>/dev/null | head -5
           fi
           echo ""
           echo "Site should be available at: https://aiagentsetup.ru"
