@@ -59,7 +59,7 @@ jobs:
         target: ${{ secrets.BEGET_TARGET_PATH }}
         strip_components: 1
         overwrite: true
-        rm: true  # Удаляем старые файлы перед копированием
+        rm: false  # НЕ удаляем старые файлы, только перезаписываем
         
     - name: Verify deployment
       uses: appleboy/ssh-action@v1.0.3
@@ -69,11 +69,22 @@ jobs:
         key: ${{ secrets.BEGET_SSH_KEY }}
         port: 22
         script: |
-          echo "✅ Deployment successful!"
-          echo "Files in target directory:"
-          ls -la "${{ secrets.BEGET_TARGET_PATH }}/"
+          echo "✅ Deployment verification:"
+          echo "Current directory: $(pwd)"
+          echo "Target path: ${{ secrets.BEGET_TARGET_PATH }}"
           echo ""
-          echo "Checking index.html:"
-          head -260 "${{ secrets.BEGET_TARGET_PATH }}/index.html" | tail -5
+          echo "=== Files in target directory ==="
+          ls -la "${{ secrets.BEGET_TARGET_PATH }}/" 2>/dev/null || echo "Directory not accessible"
+          echo ""
+          echo "=== Checking for website files ==="
+          if [ -f "${{ secrets.BEGET_TARGET_PATH }}/index.html" ]; then
+            echo "✅ index.html exists"
+            echo "Content around line 258:"
+            head -260 "${{ secrets.BEGET_TARGET_PATH }}/index.html" | tail -5
+          else
+            echo "❌ index.html NOT FOUND!"
+            echo "Trying to find any .html files:"
+            find "${{ secrets.BEGET_TARGET_PATH }}/" -name "*.html" -type f 2>/dev/null | head -5
+          fi
           echo ""
           echo "Site should be available at: https://aiagentsetup.ru"
