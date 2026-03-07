@@ -1,0 +1,61 @@
+name: Diagnose Path
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Setup SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.BEGET_SSH_KEY }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        echo "SSH key saved"
+        
+    - name: Diagnose server structure
+      run: |
+        echo "=== DIAGNOSING SERVER STRUCTURE ==="
+        
+        # 1. Куда мы подключаемся?
+        echo "1. Where do we connect?"
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "echo 'Connected as: \$(whoami)' && echo 'Home: \$HOME' && echo 'Current: \$(pwd)'"
+        echo ""
+        
+        # 2. Что в домашней директории?
+        echo "2. What's in home directory?"
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "cd ~ && ls -la"
+        echo ""
+        
+        # 3. Что на уровень выше?
+        echo "3. What's one level up?"
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "cd ~ && cd .. && ls -la"
+        echo ""
+        
+        # 4. Ищем aiagentsetup
+        echo "4. Searching for aiagentsetup..."
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "find ~ -name 'aiagentsetup' -type d 2>/dev/null || echo 'Not found in home'"
+        echo ""
+        
+        # 5. Ищем public_html
+        echo "5. Searching for public_html..."
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "find /home -name 'public_html' -type d 2>/dev/null | head -5"
+        echo ""
+        
+        # 6. Проверяем что видит файловый менеджер
+        echo "6. What does file manager see?"
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "echo 'Trying relative path:' && cd ~ && ls -la ../aiagentsetup 2>/dev/null && echo '✅ Found!' || echo '❌ Not found!'"
