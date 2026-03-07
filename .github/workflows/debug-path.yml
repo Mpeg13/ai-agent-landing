@@ -1,0 +1,54 @@
+name: Debug Path
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Setup SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.BEGET_SSH_KEY }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        echo "SSH key saved"
+        
+    - name: Debug exact path issue
+      run: |
+        echo "=== DEBUGGING PATH ISSUE ==="
+        
+        # 1. Куда мы попадаем при подключении?
+        echo "1. Initial connection point:"
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "echo 'PWD: \$(pwd)' && echo 'HOME: \$HOME' && echo 'Real home: \$(cd ~ && pwd)'"
+        echo ""
+        
+        # 2. Пробуем разные пути
+        echo "2. Trying different paths:"
+        
+        echo "a) cd ~/aiagentsetup/public_html"
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "cd ~/aiagentsetup/public_html 2>&1 && echo '✅ SUCCESS: \$(pwd)' || echo '❌ FAILED'"
+        echo ""
+        
+        echo "b) cd ../aiagentsetup/public_html"
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "cd ../aiagentsetup/public_html 2>&1 && echo '✅ SUCCESS: \$(pwd)' || echo '❌ FAILED'"
+        echo ""
+        
+        echo "c) ls -la ../"
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "ls -la ../ 2>&1 | head -5"
+        echo ""
+        
+        # 3. Абсолютный путь
+        echo "3. Absolute path:"
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ${{ secrets.BEGET_USER }}@${{ secrets.BEGET_HOST }} \
+          "echo 'Home: \$(cd ~ && pwd)' && echo 'aiagentsetup exists? \$(ls -la ~/ | grep aiagentsetup)' && echo 'Full path: \$(cd ~ && pwd)/aiagentsetup/public_html'"
