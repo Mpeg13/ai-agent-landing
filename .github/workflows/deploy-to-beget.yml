@@ -13,6 +13,33 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
+    - name: Debug - Show secrets info (masked)
+      run: |
+        echo "BEGET_HOST length: ${#BEGET_HOST}"
+        echo "BEGET_USER length: ${#BEGET_USER}"
+        echo "BEGET_TARGET_PATH length: ${#BEGET_TARGET_PATH}"
+        echo "BEGET_SSH_KEY length: ${#BEGET_SSH_KEY}"
+        echo "First 10 chars of SSH key: ${BEGET_SSH_KEY:0:10}"
+        
+    - name: Test SSH connection
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.BEGET_HOST }}
+        username: ${{ secrets.BEGET_USER }}
+        key: ${{ secrets.BEGET_SSH_KEY }}
+        port: 22
+        script: |
+          echo "✅ SSH connection successful!"
+          echo "Current directory: $(pwd)"
+          echo "User: $(whoami)"
+          echo "Checking target path: ${{ secrets.BEGET_TARGET_PATH }}"
+          if [ -d "${{ secrets.BEGET_TARGET_PATH }}" ]; then
+            echo "✅ Target directory exists"
+            ls -la "${{ secrets.BEGET_TARGET_PATH }}/" | head -10
+          else
+            echo "❌ Target directory does not exist or is not accessible"
+          fi
+      
     - name: Deploy to Beget via SSH
       uses: appleboy/scp-action@v0.1.7
       with:
@@ -36,6 +63,9 @@ jobs:
         script: |
           echo "✅ Deployment successful!"
           echo "Files in target directory:"
-          ls -la ${{ secrets.BEGET_TARGET_PATH }}
+          ls -la "${{ secrets.BEGET_TARGET_PATH }}/"
+          echo ""
+          echo "Checking index.html:"
+          head -260 "${{ secrets.BEGET_TARGET_PATH }}/index.html" | tail -5
           echo ""
           echo "Site should be available at: https://aiagentsetup.ru"
