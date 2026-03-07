@@ -13,23 +13,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Encode files to base64
+    - name: Show debug info
       run: |
-        echo "=== Encoding files to base64 ==="
-        base64 index.html > index.html.b64
-        base64 style.css > style.css.b64
-        base64 robots.txt > robots.txt.b64
-        base64 sitemap.xml > sitemap.xml.b64
-        base64 README.md > README.md.b64
-        
-        echo "Original index.html (first 100 chars):"
-        head -c 100 index.html
+        echo "=== Local files ==="
+        ls -la
         echo ""
-        echo ""
-        echo "Checking for 'Подойдёт':"
-        grep -n "Подойдёт" index.html || echo "Not found in local file"
+        echo "=== Checking 'Подойдёт' ==="
+        grep -n "Подойдёт" index.html || echo "Not found locally"
         
-    - name: Deploy via SSH with base64
+    - name: Deploy via SSH - SIMPLE METHOD
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.BEGET_HOST }}
@@ -37,68 +29,71 @@ jobs:
         key: ${{ secrets.BEGET_SSH_KEY }}
         port: 22
         script: |
-          echo "🚀 STARTING DEPLOYMENT (base64 method)"
-          echo "Target: ${{ secrets.BEGET_TARGET_PATH }}"
+          echo "=== SIMPLE DEPLOYMENT ==="
+          echo "User: $(whoami)"
+          echo "Current dir: $(pwd)"
           echo ""
           
-          # Создаем целевую папку
-          mkdir -p "${{ secrets.BEGET_TARGET_PATH }}"
-          cd "${{ secrets.BEGET_TARGET_PATH }}"
-          
-          # Очищаем старые файлы
-          echo "Cleaning old files..."
-          rm -f *.html *.css *.txt *.xml *.md 2>/dev/null || true
-          
-          echo "Creating files from base64..."
-          
-          # === index.html ===
-          echo "Creating index.html..."
-          cat > /tmp/index.b64 << 'EOF'
-          $(cat index.html.b64)
-          EOF
-          base64 -d /tmp/index.b64 > index.html
-          rm -f /tmp/index.b64
-          
-          # === style.css ===
-          echo "Creating style.css..."
-          cat > /tmp/style.b64 << 'EOF'
-          $(cat style.css.b64)
-          EOF
-          base64 -d /tmp/style.b64 > style.css
-          rm -f /tmp/style.b64
-          
-          # === robots.txt ===
-          echo "Creating robots.txt..."
-          cat > /tmp/robots.b64 << 'EOF'
-          $(cat robots.txt.b64)
-          EOF
-          base64 -d /tmp/robots.b64 > robots.txt
-          rm -f /tmp/robots.b64
-          
-          # === sitemap.xml ===
-          echo "Creating sitemap.xml..."
-          cat > /tmp/sitemap.b64 << 'EOF'
-          $(cat sitemap.xml.b64)
-          EOF
-          base64 -d /tmp/sitemap.b64 > sitemap.xml
-          rm -f /tmp/sitemap.b64
-          
-          # === README.md ===
-          echo "Creating README.md..."
-          cat > /tmp/readme.b64 << 'EOF'
-          $(cat README.md.b64)
-          EOF
-          base64 -d /tmp/readme.b64 > README.md
-          rm -f /tmp/readme.b64
-          
+          # Переходим в домашнюю директорию
+          cd ~
+          echo "Home dir: $(pwd)"
           echo ""
-          echo "=== VERIFICATION ==="
-          echo "Files created:"
+          
+          # Проверяем что есть папка aiagentsetup
+          echo "Checking aiagentsetup folder..."
+          if [ -d "aiagentsetup" ]; then
+            echo "✅ aiagentsetup folder exists"
+            echo "Contents:"
+            ls -la aiagentsetup/
+          else
+            echo "❌ aiagentsetup folder does NOT exist"
+            exit 1
+          fi
+          echo ""
+          
+          # Переходим в public_html
+          cd aiagentsetup/public_html
+          echo "Now in: $(pwd)"
+          echo "Current contents:"
           ls -la
           echo ""
-          echo "index.html size: \$(wc -l < index.html) lines"
-          echo "First 3 lines of index.html:"
-          head -3 index.html
+          
+          # Очищаем старые файлы сайта
+          echo "Cleaning old site files..."
+          rm -f *.html *.css *.txt *.xml *.md 2>/dev/null || true
+          echo "After cleanup:"
+          ls -la
+          echo ""
+          
+          # Создаем ПРОСТОЙ тестовый файл
+          echo "Creating test index.html..."
+          cat > index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="ru">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Test Deployment</title>
+          </head>
+          <body>
+            <h1>✅ GitHub Actions Deployment WORKS!</h1>
+            <p>Date: $(date)</p>
+            <p>Path: $(pwd)</p>
+            <p>User: $(whoami)</p>
+            <h3>Подойдёт ли ИИ-агент именно для ваших задач?</h3>
+            <p>YES! This text contains "Подойдёт"</p>
+          </body>
+          </html>
+          EOF
+          
+          echo "✅ Test file created"
+          echo ""
+          echo "=== VERIFICATION ==="
+          echo "Files:"
+          ls -la
+          echo ""
+          echo "index.html content (first 10 lines):"
+          head -10 index.html
           echo ""
           echo "Checking for 'Подойдёт':"
           if grep -q "Подойдёт" index.html; then
@@ -106,11 +101,7 @@ jobs:
             grep -n "Подойдёт" index.html
           else
             echo "❌ 'Подойдёт' NOT FOUND!"
-            echo "First 300 chars of index.html:"
-            head -c 300 index.html
-            echo ""
           fi
-          
           echo ""
-          echo "🎉 DEPLOYMENT COMPLETE!"
+          echo "🎉 SIMPLE DEPLOYMENT COMPLETE!"
           echo "Site: https://aiagentsetup.ru"
