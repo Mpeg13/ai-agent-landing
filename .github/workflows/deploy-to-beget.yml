@@ -13,15 +13,23 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Debug info
+    - name: Encode files to base64
       run: |
-        echo "=== Local files ==="
-        ls -la
+        echo "=== Encoding files to base64 ==="
+        base64 index.html > index.html.b64
+        base64 style.css > style.css.b64
+        base64 robots.txt > robots.txt.b64
+        base64 sitemap.xml > sitemap.xml.b64
+        base64 README.md > README.md.b64
+        
+        echo "Original index.html (first 100 chars):"
+        head -c 100 index.html
         echo ""
-        echo "=== Checking 'Подойдёт' ==="
+        echo ""
+        echo "Checking for 'Подойдёт':"
         grep -n "Подойдёт" index.html || echo "Not found in local file"
         
-    - name: Deploy ALL files at once
+    - name: Deploy via SSH with base64
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.BEGET_HOST }}
@@ -29,58 +37,79 @@ jobs:
         key: ${{ secrets.BEGET_SSH_KEY }}
         port: 22
         script: |
-          echo "🚀 STARTING DEPLOYMENT"
+          echo "🚀 STARTING DEPLOYMENT (base64 method)"
           echo "Target: ${{ secrets.BEGET_TARGET_PATH }}"
           echo ""
           
-          # Создаем целевую папку если нет
+          # Создаем целевую папку
           mkdir -p "${{ secrets.BEGET_TARGET_PATH }}"
-          
-          # Очищаем СТАРЫЕ файлы сайта (но не .git если есть)
-          echo "Cleaning old files..."
           cd "${{ secrets.BEGET_TARGET_PATH }}"
+          
+          # Очищаем старые файлы
+          echo "Cleaning old files..."
           rm -f *.html *.css *.txt *.xml *.md 2>/dev/null || true
           
-          echo "Ready to receive files..."
+          echo "Creating files from base64..."
           
-          # === ФАЙЛ 1: index.html ===
-          cat > index.html << 'EOFINDEX'
-          $(cat index.html)
-          EOFINDEX
-          echo "✓ index.html created"
+          # === index.html ===
+          echo "Creating index.html..."
+          cat > /tmp/index.b64 << 'EOF'
+          $(cat index.html.b64)
+          EOF
+          base64 -d /tmp/index.b64 > index.html
+          rm -f /tmp/index.b64
           
-          # === ФАЙЛ 2: style.css ===
-          cat > style.css << 'EOFSTYLE'
-          $(cat style.css)
-          EOFSTYLE
-          echo "✓ style.css created"
+          # === style.css ===
+          echo "Creating style.css..."
+          cat > /tmp/style.b64 << 'EOF'
+          $(cat style.css.b64)
+          EOF
+          base64 -d /tmp/style.b64 > style.css
+          rm -f /tmp/style.b64
           
-          # === ФАЙЛ 3: robots.txt ===
-          cat > robots.txt << 'EOFROBOTS'
-          $(cat robots.txt)
-          EOFROBOTS
-          echo "✓ robots.txt created"
+          # === robots.txt ===
+          echo "Creating robots.txt..."
+          cat > /tmp/robots.b64 << 'EOF'
+          $(cat robots.txt.b64)
+          EOF
+          base64 -d /tmp/robots.b64 > robots.txt
+          rm -f /tmp/robots.b64
           
-          # === ФАЙЛ 4: sitemap.xml ===
-          cat > sitemap.xml << 'EOFSITEMAP'
-          $(cat sitemap.xml)
-          EOFSITEMAP
-          echo "✓ sitemap.xml created"
+          # === sitemap.xml ===
+          echo "Creating sitemap.xml..."
+          cat > /tmp/sitemap.b64 << 'EOF'
+          $(cat sitemap.xml.b64)
+          EOF
+          base64 -d /tmp/sitemap.b64 > sitemap.xml
+          rm -f /tmp/sitemap.b64
           
-          # === ФАЙЛ 5: README.md ===
-          cat > README.md << 'EOFREADME'
-          $(cat README.md)
-          EOFREADME
-          echo "✓ README.md created"
+          # === README.md ===
+          echo "Creating README.md..."
+          cat > /tmp/readme.b64 << 'EOF'
+          $(cat README.md.b64)
+          EOF
+          base64 -d /tmp/readme.b64 > README.md
+          rm -f /tmp/readme.b64
           
           echo ""
           echo "=== VERIFICATION ==="
-          echo "Files in target:"
+          echo "Files created:"
           ls -la
           echo ""
-          echo "index.html lines: \$(wc -l < index.html)"
-          echo "Checking 'Подойдёт':"
-          grep -n "Подойдёт" index.html && echo "✅ SUCCESS!" || echo "❌ FAILED!"
+          echo "index.html size: \$(wc -l < index.html) lines"
+          echo "First 3 lines of index.html:"
+          head -3 index.html
+          echo ""
+          echo "Checking for 'Подойдёт':"
+          if grep -q "Подойдёт" index.html; then
+            echo "✅ 'Подойдёт' FOUND!"
+            grep -n "Подойдёт" index.html
+          else
+            echo "❌ 'Подойдёт' NOT FOUND!"
+            echo "First 300 chars of index.html:"
+            head -c 300 index.html
+            echo ""
+          fi
           
           echo ""
           echo "🎉 DEPLOYMENT COMPLETE!"
