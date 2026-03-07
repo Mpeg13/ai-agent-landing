@@ -21,7 +21,7 @@ jobs:
         echo "=== Checking 'Подойдёт' ==="
         grep -n "Подойдёт" index.html || echo "Not found locally"
         
-    - name: Deploy via SSH - SIMPLE METHOD
+    - name: Deploy ALL files via SSH
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.BEGET_HOST }}
@@ -29,7 +29,7 @@ jobs:
         key: ${{ secrets.BEGET_SSH_KEY }}
         port: 22
         script: |
-          echo "=== SIMPLE DEPLOYMENT ==="
+          echo "=== FULL DEPLOYMENT ==="
           echo "User: $(whoami)"
           echo "Current dir: $(pwd)"
           echo ""
@@ -43,8 +43,6 @@ jobs:
           echo "Checking aiagentsetup folder..."
           if [ -d "aiagentsetup" ]; then
             echo "✅ aiagentsetup folder exists"
-            echo "Contents:"
-            ls -la aiagentsetup/
           else
             echo "❌ aiagentsetup folder does NOT exist"
             exit 1
@@ -58,42 +56,58 @@ jobs:
           ls -la
           echo ""
           
-          # Очищаем старые файлы сайта
+          # Очищаем старые файлы сайта (но не .git папку)
           echo "Cleaning old site files..."
           rm -f *.html *.css *.txt *.xml *.md 2>/dev/null || true
           echo "After cleanup:"
           ls -la
           echo ""
           
-          # Создаем ПРОСТОЙ тестовый файл
-          echo "Creating test index.html..."
-          cat > index.html << 'EOF'
-          <!DOCTYPE html>
-          <html lang="ru">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Test Deployment</title>
-          </head>
-          <body>
-            <h1>✅ GitHub Actions Deployment WORKS!</h1>
-            <p>Date: $(date)</p>
-            <p>Path: $(pwd)</p>
-            <p>User: $(whoami)</p>
-            <h3>Подойдёт ли ИИ-агент именно для ваших задач?</h3>
-            <p>YES! This text contains "Подойдёт"</p>
-          </body>
-          </html>
-          EOF
+          echo "Creating site files..."
           
-          echo "✅ Test file created"
+          # === index.html ===
+          echo "Creating index.html..."
+          cat > index.html << 'EOFINDEX'
+          $(cat index.html)
+          EOFINDEX
+          echo "✅ index.html created"
+          
+          # === style.css ===
+          echo "Creating style.css..."
+          cat > style.css << 'EOFSTYLE'
+          $(cat style.css)
+          EOFSTYLE
+          echo "✅ style.css created"
+          
+          # === robots.txt ===
+          echo "Creating robots.txt..."
+          cat > robots.txt << 'EOFROBOTS'
+          $(cat robots.txt)
+          EOFROBOTS
+          echo "✅ robots.txt created"
+          
+          # === sitemap.xml ===
+          echo "Creating sitemap.xml..."
+          cat > sitemap.xml << 'EOFSITEMAP'
+          $(cat sitemap.xml)
+          EOFSITEMAP
+          echo "✅ sitemap.xml created"
+          
+          # === README.md ===
+          echo "Creating README.md..."
+          cat > README.md << 'EOFREADME'
+          $(cat README.md)
+          EOFREADME
+          echo "✅ README.md created"
+          
           echo ""
           echo "=== VERIFICATION ==="
-          echo "Files:"
+          echo "Files created:"
           ls -la
           echo ""
-          echo "index.html content (first 10 lines):"
-          head -10 index.html
+          echo "index.html size: \$(wc -l < index.html) lines"
+          echo "First 3 lines of index.html:"
+          head -3 index.html
           echo ""
           echo "Checking for 'Подойдёт':"
           if grep -q "Подойдёт" index.html; then
@@ -101,7 +115,10 @@ jobs:
             grep -n "Подойдёт" index.html
           else
             echo "❌ 'Подойдёт' NOT FOUND!"
+            echo "First 300 chars of index.html:"
+            head -c 300 index.html
+            echo ""
           fi
           echo ""
-          echo "🎉 SIMPLE DEPLOYMENT COMPLETE!"
+          echo "🎉 FULL DEPLOYMENT COMPLETE!"
           echo "Site: https://aiagentsetup.ru"
